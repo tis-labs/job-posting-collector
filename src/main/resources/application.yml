@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: collector
+  batch:
+    job:
+      name: COLLECTOR_JOB
