@@ -2,6 +2,7 @@ package posting.job.collector.service;
 
 import org.springframework.stereotype.Service;
 import posting.job.collector.configuration.TargetSource;
+import posting.job.collector.service.extractor.KakaoJobPostingExtractor;
 import posting.job.collector.service.extractor.NaverJobPostingExtractor;
 
 @Service
@@ -10,7 +11,8 @@ public class ExtractJobPostingService {
         return switch (item) {
             case NAVER -> new NaverJobPostingExtractor(item.getUrl()).extract();
             case NHN -> "NHN";
-            case KAKAO -> "KAKAO";
+            case KAKAO -> new KakaoJobPostingExtractor(item.getUrl()).extract();
+            case COUPANG -> "COUPANG";
         };
     }
 }
