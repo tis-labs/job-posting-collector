@@ -20,10 +20,15 @@ import java.util.regex.Pattern;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.springframework.beans.factory.annotation.Autowired;
+import posting.job.collector.service.UrlDecoder;
 
 @AllArgsConstructor
 public class KakaoJobPostingExtractor {
     private final String url;
+
+    @Autowired  // UrlDecoder 주입
+    private UrlDecoder urlDecoder;
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlKakaoCareers();
@@ -32,39 +37,31 @@ public class KakaoJobPostingExtractor {
 
     private List<JobPosting> crawlKakaoCareers() throws Exception {
         List<JobPosting> jobPostings = new ArrayList<>();
-
-        // 크롬 드라이버 자동 설치
-//        WebDriverManager.chromedriver().setup();
-        //버전을 강제로 지정해서 사용
         WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+        //브라우저 숨김처리
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless");
+        options.addArguments("--disable-gpu");
 
-        WebDriver driver = new ChromeDriver();
-
+        WebDriver driver = new ChromeDriver(options);
         // Selenium을 사용해 동적으로 페이지 로드
         driver.get(url);
 
-        // WebDriver를 사용하여 작업을 진행
-        System.out.println(driver.getTitle());
         // 페이지 로딩 대기 (필요한 경우 WebDriverWait을 사용해 로딩을 기다릴 수 있음)
         Thread.sleep(5000); // 5초 대기, 필요시 더 길게 조정
 
         // 페이지 HTML 가져오기
         String pageSource = driver.getPageSource();
-        driver.quit();  // 브라우저 종료
-
-        // Jsoup로 HTML 파싱
+        driver.quit();
         Document document = Jsoup.parse(pageSource);
-        System.out.println("Document HTML: " + document.html());
-
-
-
         Elements Jobs = document.select("ul.list_jobs a");
-        System.out.println("Number of job elements found: " + Jobs.size());
-
         for (Element card: Jobs){
             JobPosting job = new JobPosting();
 
             String href = card.attr("href");
+            String decordedUrl = urlDecoder.decodeUrl(href);
+            job.setJobDetailUrl("https://careers.kakao.com"+decordedUrl);
+
             job.setId(extractId(href));
 
             String title = card.select("h4.tit_jobs").text();
@@ -129,12 +126,6 @@ public class KakaoJobPostingExtractor {
         return "";
     }
 
-    private String getCompanyName(String className) {
-        return switch (className) {
-            case "snow" -> "SNOW";
-            default -> "KAKAO";
-        };
-    }
 
     private String convertToJson(List<JobPosting> jobPostings) {
         JobPostingResult result = new JobPostingResult(jobPostings, jobPostings.size(), LocalDate.now().toString());
@@ -162,5 +153,6 @@ public class KakaoJobPostingExtractor {
         private String employmentType;
         private String period;
         private String company;
+        private String jobDetailUrl;
     }
 }
