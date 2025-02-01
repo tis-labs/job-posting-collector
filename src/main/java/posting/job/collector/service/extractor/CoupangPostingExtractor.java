@@ -5,8 +5,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -14,6 +12,8 @@ import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import posting.job.collector.domain.JobPosting;
+import posting.job.collector.util.JsonUtil;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ public class CoupangPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlCoupangCareers();
-        return convertToJson(jobPostings);
+        return JsonUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlCoupangCareers() throws Exception {
@@ -63,19 +63,9 @@ public class CoupangPostingExtractor {
                 // Team 관련 정보를 추출하여 department에 설정
                 String team = extractTeam(title);
                 if (!team.isEmpty()) {
-                    job.setDepartment(team);
+                    job.setJobRole(team);
                 }
             }
-
-            // 위치 정보 추출
-            Element locationElement = jobElement.selectFirst("ul.list-inline.job-meta li");
-            if (locationElement != null) {
-                String location = locationElement.text();
-                job.setLocation(location);
-
-            }
-
-
 
             jobPostings.add(job);
 
@@ -110,35 +100,5 @@ public class CoupangPostingExtractor {
     }
 
 
-
-    private String convertToJson(List<JobPosting> jobPostings) {
-        JobPostingResult result = new JobPostingResult(jobPostings, jobPostings.size(), LocalDate.now().toString());
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        return gson.toJson(result);
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private static class JobPostingResult {
-        private List<JobPosting> jobs;
-        private int totalCount;
-        private String lastUpdated;
-    }
-
-
-    @Getter
-    @Setter
-    private static class JobPosting {
-        private String id;
-        private String title;
-        private String department;
-        private String field;
-        private String careerLevel;
-        private String employmentType;
-        private String period;
-        private String company;
-        private String jobDetailUrl;
-        private String location;
-    }
 
 }

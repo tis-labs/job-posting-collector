@@ -1,11 +1,7 @@
 package posting.job.collector.service.extractor;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -13,11 +9,12 @@ import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+
+import posting.job.collector.domain.JobPosting;
+import posting.job.collector.util.JsonUtil;
+
 
 @AllArgsConstructor
 public class HyundaiJobPostingExtractor {
@@ -25,7 +22,7 @@ public class HyundaiJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlHyundaiCareers();
-        return convertToJson(jobPostings);
+        return JsonUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlHyundaiCareers() throws Exception {
@@ -69,17 +66,9 @@ public class HyundaiJobPostingExtractor {
                 }
             }
             if (departmentBuilder.length() > 0) {
-                job.setDepartment(departmentBuilder.toString());
+                job.setJobRole(departmentBuilder.toString());
             }
 
-            // 근무지 정보 (예: #남양연구소)
-            Elements locationElements = jobItem.select("span[data-type='place']");
-            String location = locationElements.stream()
-                    .map(Element::text)
-                    .collect(Collectors.joining(", "));
-            if (!location.isEmpty()) {
-                job.setLocation(location);
-            }
 
             // 채용 기간 (예: 채용시까지)
             Element periodElement = jobItem.selectFirst(".d__day");
@@ -100,7 +89,7 @@ public class HyundaiJobPostingExtractor {
                 }
             }
             if (fieldBuilder.length() > 0) {
-                job.setField(fieldBuilder.toString());
+                job.setJobCategory(fieldBuilder.toString());
             }
 
             job.setCompany("HYUNDAI");
@@ -117,32 +106,6 @@ public class HyundaiJobPostingExtractor {
         return jobPostings;
     }
 
-    private String convertToJson(List<JobPosting> jobPostings) {
-        JobPostingResult result = new JobPostingResult(jobPostings, jobPostings.size(), LocalDate.now().toString());
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        return gson.toJson(result);
-    }
 
-    @Getter
-    @AllArgsConstructor
-    private static class JobPostingResult {
-        private List<JobPosting> jobs;
-        private int totalCount;
-        private String lastUpdated;
-    }
 
-    @Getter
-    @Setter
-    private static class JobPosting {
-        private String id;
-        private String title;
-        private String department;
-        private String location;
-        private String field;
-        private String careerLevel;
-        private String employmentType;
-        private String period;
-        private String company;
-        private String jobDetailUrl;
-    }
 }

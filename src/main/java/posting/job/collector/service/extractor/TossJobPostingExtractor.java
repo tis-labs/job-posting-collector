@@ -1,11 +1,7 @@
 package posting.job.collector.service.extractor;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -14,9 +10,10 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import posting.job.collector.domain.JobPosting;
+import posting.job.collector.util.JsonUtil;
 
 @AllArgsConstructor
 public class TossJobPostingExtractor {
@@ -24,7 +21,7 @@ public class TossJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlTossCareers();
-        return convertToJson(jobPostings);
+        return JsonUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlTossCareers() throws Exception {
@@ -69,12 +66,12 @@ public class TossJobPostingExtractor {
             if (departmentElement != null) {
                 String[] departmentParts = departmentElement.text().split(" ・ ");
                 if (departmentParts.length > 0) {
-                    job.setDepartment(departmentParts[0]);  // 첫 번째 값(SAP)을 부서로 설정
+                    job.setJobRole(departmentParts[0]);  // 첫 번째 값(SAP)을 부서로 설정
                 }
             }
 
             // Field (기술 스택 등) - 여기에 대해선 그대로
-            job.setField(departmentElement != null ? departmentElement.text() : null);
+//            job.setField(departmentElement != null ? departmentElement.text() : null);
 
             // Career Level (경력 정보) - "(2년 이상)" 텍스트 추출
             String careerLevel = extractCareerLevel(job.getTitle());
@@ -115,31 +112,6 @@ public class TossJobPostingExtractor {
         return null;
     }
 
-    private String convertToJson(List<JobPosting> jobPostings) {
-        JobPostingResult result = new JobPostingResult(jobPostings, jobPostings.size(), LocalDate.now().toString());
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        return gson.toJson(result);
-    }
 
-    @Getter
-    @AllArgsConstructor
-    private static class JobPostingResult {
-        private List<JobPosting> jobs;
-        private int totalCount;
-        private String lastUpdated;
-    }
 
-    @Getter
-    @Setter
-    private static class JobPosting {
-        private String id;
-        private String title;
-        private String department;
-        private String field;
-        private String careerLevel;
-        private String employmentType;
-        private String period;
-        private String company;
-        private String jobDetailUrl;
-    }
 }

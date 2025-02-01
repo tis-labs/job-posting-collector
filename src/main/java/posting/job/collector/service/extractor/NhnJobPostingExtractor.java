@@ -1,11 +1,7 @@
 package posting.job.collector.service.extractor;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -14,9 +10,10 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import posting.job.collector.domain.JobPosting;
+import posting.job.collector.util.JsonUtil;
 
 
 @AllArgsConstructor
@@ -26,7 +23,7 @@ public class NhnJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlNhnCareers();
-        return convertToJson(jobPostings);
+        return JsonUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlNhnCareers() throws Exception {
@@ -61,8 +58,8 @@ public class NhnJobPostingExtractor {
             Element detailsContainer = jobElement.selectFirst(".flex.items-center.gap-x-8");
             if (detailsContainer != null) {
                 Elements detailSpans = detailsContainer.select("span"); // span 태그만 선택
-                if (detailSpans.size() > 0) job.setDepartment(detailSpans.get(0).text());
-                if (detailSpans.size() > 1) job.setField(detailSpans.get(1).text());
+                if (detailSpans.size() > 0) job.setJobCategory(detailSpans.get(0).text());
+                if (detailSpans.size() > 1) job.setJobRole(detailSpans.get(1).text());
                 if (detailSpans.size() > 2) job.setCareerLevel(detailSpans.get(2).text());
                 if (detailSpans.size() > 3) job.setEmploymentType(detailSpans.get(3).text());
                 if (detailSpans.size() > 4) job.setPeriod(detailSpans.get(4).text());
@@ -84,32 +81,5 @@ public class NhnJobPostingExtractor {
     }
 
 
-    private String convertToJson(List<JobPosting> jobPostings) {
-        JobPostingResult result = new JobPostingResult(jobPostings, jobPostings.size(), LocalDate.now().toString());
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        return gson.toJson(result);
-    }
 
-    @Getter
-    @AllArgsConstructor
-    private static class JobPostingResult {
-        private List<JobPosting> jobs;
-        private int totalCount;
-        private String lastUpdated;
-    }
-
-
-    @Getter
-    @Setter
-    private static class JobPosting {
-        private String id;
-        private String title;
-        private String department;
-        private String field;
-        private String careerLevel;
-        private String employmentType;
-        private String period;
-        private String company;
-        private String jobDetailUrl;
-    }
 }
