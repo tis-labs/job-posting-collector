@@ -15,8 +15,6 @@ import java.util.regex.Pattern;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.springframework.beans.factory.annotation.Autowired;
-import posting.job.collector.service.UrlDecoder;
 import posting.job.collector.domain.JobPosting;
 import posting.job.collector.util.JsonUtil;
 
@@ -24,9 +22,6 @@ import posting.job.collector.util.JsonUtil;
 @AllArgsConstructor
 public class KakaoJobPostingExtractor {
     private final String url;
-
-    @Autowired  // UrlDecoder 주입
-    private UrlDecoder urlDecoder;
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlKakaoCareers();
@@ -70,8 +65,7 @@ public class KakaoJobPostingExtractor {
             job.setJobCategory(jobCategory);
 
             String href = card.attr("href");
-            String decordedUrl = urlDecoder.decodeUrl(href);
-            job.setJobDetailUrl("https://careers.kakao.com"+decordedUrl);
+            job.setJobDetailUrl(href);
 
             job.setId(extractId(href));
 
