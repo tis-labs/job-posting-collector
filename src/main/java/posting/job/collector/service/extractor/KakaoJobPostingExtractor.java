@@ -1,18 +1,13 @@
 package posting.job.collector.service.extractor;
 
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -22,6 +17,9 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import posting.job.collector.service.UrlDecoder;
+import posting.job.collector.domain.JobPosting;
+import posting.job.collector.util.JsonUtil;
+
 
 @AllArgsConstructor
 public class KakaoJobPostingExtractor {
@@ -32,7 +30,7 @@ public class KakaoJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlKakaoCareers();
-        return convertToJson(jobPostings);
+        return JsonUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlKakaoCareers() throws Exception {
@@ -54,9 +52,22 @@ public class KakaoJobPostingExtractor {
         String pageSource = driver.getPageSource();
         driver.quit();
         Document document = Jsoup.parse(pageSource);
-        Elements Jobs = document.select("ul.list_jobs a");
+
+
+        String jobCategory = null;
+
+        Elements contJob = document.select("main.cont_job");
+        Elements elements = contJob.select("ul.tab_job li");
+        for (Element element : elements) {
+            if (element.hasClass("cursor_hand") && element.hasClass("on") && jobCategory == null) {
+                String jobType = element.select(".txt_tab").text();  // 테크 문구 가져오기
+                jobCategory = jobType;
+            }
+        }
+        Elements Jobs = contJob.select("ul.list_jobs a");
         for (Element card: Jobs){
             JobPosting job = new JobPosting();
+            job.setJobCategory(jobCategory);
 
             String href = card.attr("href");
             String decordedUrl = urlDecoder.decodeUrl(href);
@@ -76,11 +87,11 @@ public class KakaoJobPostingExtractor {
 
             }
 
-            Elements departmentElements = document.select("span.link_tag");
+            Elements JobRoleElements = card.select("span.link_tag.cursor_hand.false");
 
-            for (Element departmentElement : departmentElements) {
-                String department = departmentElement.ownText().replace("#", "").trim();
-                job.setDepartment(department);
+            for (Element jobRoleElement : JobRoleElements) {
+                String jobRole = jobRoleElement.ownText().replace("#", "").trim();
+                job.setJobRole(jobRole);
             }
 
 
@@ -127,32 +138,7 @@ public class KakaoJobPostingExtractor {
     }
 
 
-    private String convertToJson(List<JobPosting> jobPostings) {
-        JobPostingResult result = new JobPostingResult(jobPostings, jobPostings.size(), LocalDate.now().toString());
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        return gson.toJson(result);
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private static class JobPostingResult {
-        private List<JobPosting> jobs;
-        private int totalCount;
-        private String lastUpdated;
-    }
 
 
-    @Getter
-    @Setter
-    private static class JobPosting {
-        private String id;
-        private String title;
-        private String department;
-        private String field;
-        private String careerLevel;
-        private String employmentType;
-        private String period;
-        private String company;
-        private String jobDetailUrl;
-    }
+
 }
