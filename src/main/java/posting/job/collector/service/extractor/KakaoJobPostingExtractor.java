@@ -117,7 +117,7 @@ public class KakaoJobPostingExtractor {
                 }
             }
 
-            if(job.getJobDetailUrl() != null || job.getJobCategory() != null || job.getJobRole() != null || job.getCareerLevel() != null || job.getEmploymentType() != null || job.getPeriod() != null || job.getCompany() != null || job.getTitle() != null){
+            if(JobPostingUtil.isValidJobPosting(job)) {
                 jobPostings.add(job);
             }
 
