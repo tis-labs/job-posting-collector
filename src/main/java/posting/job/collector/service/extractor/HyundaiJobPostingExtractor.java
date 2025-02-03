@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import posting.job.collector.domain.JobPosting;
-import posting.job.collector.util.JsonUtil;
+import posting.job.collector.util.JobPostingUtil;
 
 
 @AllArgsConstructor
@@ -22,7 +22,7 @@ public class HyundaiJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlHyundaiCareers();
-        return JsonUtil.convertToJson(jobPostings);
+        return JobPostingUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlHyundaiCareers() throws Exception {
@@ -92,7 +92,7 @@ public class HyundaiJobPostingExtractor {
                 job.setJobCategory(fieldBuilder.toString());
             }
 
-            job.setCompany("HYUNDAI");
+
 
             // 상세 URL
             Element jobDetailLink = jobItem.selectFirst("a");
@@ -100,8 +100,10 @@ public class HyundaiJobPostingExtractor {
                 job.setJobDetailUrl(jobDetailLink.absUrl("href"));
             }
 
-            // jobList에 추가
-            jobPostings.add(job);
+            if(JobPostingUtil.isValidJobPosting(job)) {
+                job.setCompany("HYUNDAI");
+                jobPostings.add(job);
+            }
         }
         return jobPostings;
     }

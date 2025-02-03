@@ -16,7 +16,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import posting.job.collector.domain.JobPosting;
-import posting.job.collector.util.JsonUtil;
+import posting.job.collector.util.JobPostingUtil;
 
 
 @AllArgsConstructor
@@ -25,7 +25,7 @@ public class KakaoJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlKakaoCareers();
-        return JsonUtil.convertToJson(jobPostings);
+        return JobPostingUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlKakaoCareers() throws Exception {
@@ -117,7 +117,9 @@ public class KakaoJobPostingExtractor {
                 }
             }
 
-            jobPostings.add(job);
+            if(job.getJobDetailUrl() != null || job.getJobCategory() != null || job.getJobRole() != null || job.getCareerLevel() != null || job.getEmploymentType() != null || job.getPeriod() != null || job.getCompany() != null || job.getTitle() != null){
+                jobPostings.add(job);
+            }
 
 
         }

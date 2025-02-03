@@ -13,7 +13,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import java.util.ArrayList;
 import java.util.List;
 import posting.job.collector.domain.JobPosting;
-import posting.job.collector.util.JsonUtil;
+import posting.job.collector.util.JobPostingUtil;
 
 
 @AllArgsConstructor
@@ -22,7 +22,7 @@ public class SamsungJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlSamsungCareers();
-        return JsonUtil.convertToJson(jobPostings);
+        return JobPostingUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlSamsungCareers() throws Exception {
@@ -87,11 +87,14 @@ public class SamsungJobPostingExtractor {
 
 
             Element jobDetailLink = jobItem.selectFirst("a");
-            if (jobDetailLink != null) {
+            if (jobDetailLink != null && jobDetailLink.absUrl("href") != "") {
                 job.setJobDetailUrl(jobDetailLink.absUrl("href"));
             }
 
-            jobPostings.add(job);
+            if(JobPostingUtil.isValidJobPosting(job)) {
+                jobPostings.add(job);
+            }
+
         }
 
 

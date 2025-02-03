@@ -14,7 +14,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import java.util.ArrayList;
 import java.util.List;
 import posting.job.collector.domain.JobPosting;
-import posting.job.collector.util.JsonUtil;
+import posting.job.collector.util.JobPostingUtil;
 
 @AllArgsConstructor
 public class SocarCorpJobPostingExtractor {
@@ -22,7 +22,7 @@ public class SocarCorpJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlSocarCorpCareers();
-        return JsonUtil.convertToJson(jobPostings);
+        return JobPostingUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlSocarCorpCareers() throws Exception {
@@ -83,7 +83,9 @@ public class SocarCorpJobPostingExtractor {
                 job.setCompany(companyElement.text());
             }
 
-            jobPostings.add(job); // 리스트에 JobPosting 객체 추가
+            if(JobPostingUtil.isValidJobPosting(job)) {
+                jobPostings.add(job);
+            }
         }
 
         return jobPostings;

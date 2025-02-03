@@ -12,8 +12,11 @@ import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import posting.job.collector.domain.JobPosting;
-import posting.job.collector.util.JsonUtil;
+import posting.job.collector.util.JobPostingUtil;
 
 
 @AllArgsConstructor
@@ -23,7 +26,7 @@ public class NhnJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlNhnCareers();
-        return JsonUtil.convertToJson(jobPostings);
+        return JobPostingUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlNhnCareers() throws Exception {
@@ -52,6 +55,11 @@ public class NhnJobPostingExtractor {
             Element titleElement = jobElement.selectFirst("h4 span");
             if (titleElement != null) {
                 job.setTitle(titleElement.text());
+                Pattern pattern = Pattern.compile("\\[(.*?)]");
+                Matcher matcher = pattern.matcher(titleElement.text());
+                if (matcher.find()) {
+                    job.setCompany(matcher.group(1).trim());
+                }
             }
 
             // 상세 정보 추출
@@ -65,8 +73,9 @@ public class NhnJobPostingExtractor {
                 if (detailSpans.size() > 4) job.setPeriod(detailSpans.get(4).text());
             }
 
-            // JobPosting 객체를 리스트에 추가
-            jobPostings.add(job);
+            if(JobPostingUtil.isValidJobPosting(job)) {
+                jobPostings.add(job);
+            }
         }
 
 //

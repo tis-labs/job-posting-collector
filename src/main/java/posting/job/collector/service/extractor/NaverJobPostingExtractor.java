@@ -9,7 +9,7 @@ import org.jsoup.select.Elements;
 import java.util.ArrayList;
 import java.util.List;
 import posting.job.collector.domain.JobPosting;
-import posting.job.collector.util.JsonUtil;
+import posting.job.collector.util.JobPostingUtil;
 
 
 @AllArgsConstructor
@@ -18,7 +18,7 @@ public class NaverJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlNaverCareers();
-        return JsonUtil.convertToJson(jobPostings);
+        return JobPostingUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlNaverCareers() throws Exception {
@@ -53,7 +53,9 @@ public class NaverJobPostingExtractor {
                 job.setCompany(getCompanyName(companyLogo.className()));
             }
 
-            jobPostings.add(job);
+            if(JobPostingUtil.isValidJobPosting(job)) {
+                jobPostings.add(job);
+            }
         }
 
         return jobPostings;

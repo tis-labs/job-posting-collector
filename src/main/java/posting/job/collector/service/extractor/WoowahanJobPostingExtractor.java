@@ -13,6 +13,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import posting.job.collector.domain.JobPosting;
 import posting.job.collector.domain.JobPostingResult;
+import posting.job.collector.util.JobPostingUtil;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -106,9 +107,12 @@ public class WoowahanJobPostingExtractor {
 
             }
 
+            // Company 정보 설정
 
-            // JobPosting 객체를 리스트에 추가
-            jobPostings.add(job);
+            if(JobPostingUtil.isValidJobPosting(job)) {
+                job.setCompany("WOOWAHAN");
+                jobPostings.add(job);
+            }
         }
 
         return jobPostings;

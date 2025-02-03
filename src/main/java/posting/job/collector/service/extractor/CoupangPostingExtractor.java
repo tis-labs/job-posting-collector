@@ -1,8 +1,6 @@
 package posting.job.collector.service.extractor;
 
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.AllArgsConstructor;
 import org.jsoup.Jsoup;
@@ -13,9 +11,8 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import posting.job.collector.domain.JobPosting;
-import posting.job.collector.util.JsonUtil;
+import posting.job.collector.util.JobPostingUtil;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -28,7 +25,7 @@ public class CoupangPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlCoupangCareers();
-        return JsonUtil.convertToJson(jobPostings);
+        return JobPostingUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlCoupangCareers() throws Exception {
@@ -67,10 +64,9 @@ public class CoupangPostingExtractor {
                 }
             }
 
-            jobPostings.add(job);
-
-
-//
+          if(JobPostingUtil.isValidJobPosting(job)) {
+                jobPostings.add(job);
+            }
 
         }
         return jobPostings;

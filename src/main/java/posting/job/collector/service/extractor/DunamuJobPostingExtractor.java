@@ -13,7 +13,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import java.util.ArrayList;
 import java.util.List;
 import posting.job.collector.domain.JobPosting;
-import posting.job.collector.util.JsonUtil;
+import posting.job.collector.util.JobPostingUtil;
 
 
 @AllArgsConstructor
@@ -22,7 +22,7 @@ public class DunamuJobPostingExtractor {
 
     public String extract() throws Exception {
         List<JobPosting> jobPostings = crawlDunamuCareers();
-        return JsonUtil.convertToJson(jobPostings);
+        return JobPostingUtil.convertToJson(jobPostings);
     }
 
     private List<JobPosting> crawlDunamuCareers() throws Exception {
@@ -60,10 +60,13 @@ public class DunamuJobPostingExtractor {
                 job.setJobRole(departmentElement.text());
             }
 
-            // Company (회사명) - 회사명은 DUNAMU로 고정
-            job.setCompany("DUNAMU");
 
-            jobPostings.add(job); // 리스트에 JobPosting 객체 추가
+
+            if(JobPostingUtil.isValidJobPosting(job)) {
+                // Company (회사명) - 회사명은 DUNAMU로 고정
+                job.setCompany("DUNAMU");
+                jobPostings.add(job);
+            }
         }
 
         return jobPostings;
