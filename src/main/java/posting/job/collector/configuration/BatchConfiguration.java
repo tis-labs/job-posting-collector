@@ -1,18 +1,25 @@
 package posting.job.collector.configuration;
 
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
-import org.springframework.batch.item.*;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
+import posting.job.collector.domain.TempJobPosting;
 import posting.job.collector.service.ExtractJobPostingService;
 import posting.job.collector.service.FindJobPostingService;
+import posting.job.collector.service.StandbyCrawledJobService;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Configuration
 public class BatchConfiguration {
@@ -24,9 +31,11 @@ public class BatchConfiguration {
     @Bean
     Job collectorJob(
             JobRepository jobRepository,
-            Step collectJobPostingStep
+            Step collectJobPostingStep,
+            JobExecutionListener afterSystemExitListener
     ) {
         return new JobBuilder(COLLECTOR_JOB, jobRepository)
+                .listener(afterSystemExitListener)
                 .start(collectJobPostingStep)
                 .build();
     }
@@ -61,6 +70,7 @@ public class BatchConfiguration {
     }
 
     @Bean
+        // FIXME : String 유형을 JobPosting 방식으로 변형한다.
     ItemProcessor<TargetSource, String> collectJobPostingProcessor(
             ExtractJobPostingService extractJobPostingService
     ) {
@@ -68,10 +78,36 @@ public class BatchConfiguration {
     }
 
     @Bean
-    ItemWriter<String> saveJobPostingWriter() {
+    ItemWriter<String> saveJobPostingWriter(
+            StandbyCrawledJobService standbyCrawledJobService
+    ) {
         return items -> {
+            // FIXME : String 유형을 JobPosting 방식으로 변형한다.
             for (String item : items) {
-                System.out.println(item);
+                TempJobPosting tempJobPosting = new TempJobPosting(UUID.randomUUID().toString(), item, LocalDateTime.now());
+                standbyCrawledJobService.standby(tempJobPosting);
+            }
+        };
+    }
+
+    @Bean
+    JobExecutionListener afterSystemExitListener() {
+        /*
+          After Job 명령은 JOB 작업은 완료됐지만 JOB 이 종료되기 전에 실행한다.
+          JOB 종료 후 시스템이 종료되도록 3초 뒤 시스템 종료를 수행한다.
+          AXON 프레임워크 사용시 AXON 서버와 연결이 유지되기 때문에 직접 종료해야 한다.
+          FIXME : JOB 종료 시점을 파악해 종료하거나 AXON 서버와 연결을 끊어야 한다.
+         */
+        return new JobExecutionListener() {
+            @Override
+            public void afterJob(JobExecution jobExecution) {
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException ignored) {
+                    }
+                    System.exit(0);
+                }).start();
             }
         };
     }
