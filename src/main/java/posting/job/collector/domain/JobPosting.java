@@ -30,7 +30,6 @@ public class JobPosting {
     }
 
     public String generateUniqueId() {
-//        return jobCompany + jobTitle;
         if (jobTitle != null && jobCompany != null && !jobTitle.isEmpty() && !jobCompany.isEmpty()) {
             return new StringBuilder(jobCompany).append(jobTitle).toString();
         }
