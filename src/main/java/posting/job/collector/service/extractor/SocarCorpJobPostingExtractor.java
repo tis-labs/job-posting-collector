@@ -12,8 +12,13 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.RawJobPosting;
+import posting.job.collector.service.normalizer.SocarCorpJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
 
 @AllArgsConstructor
@@ -21,13 +26,15 @@ public class SocarCorpJobPostingExtractor {
     private final String url;
 
     public String extract() throws Exception {
-        List<JobPosting> jobPostings = crawlSocarCorpCareers();
+        List<RawJobPosting> rawJobPostings = crawlSocarCorpCareers();
+        List<JobPosting> jobPostings = new SocarCorpJobNormalizer().normalize(rawJobPostings);
         return JobPostingUtil.convertToJson(jobPostings);
     }
 
-    private List<JobPosting> crawlSocarCorpCareers() throws Exception {
-        List<JobPosting> jobPostings = new ArrayList<>();
-        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+    private List<RawJobPosting> crawlSocarCorpCareers() throws Exception {
+        List<RawJobPosting> rawJobPostings = new ArrayList<>();
+//        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--disable-gpu");
@@ -43,12 +50,12 @@ public class SocarCorpJobPostingExtractor {
         Elements jobElements = document.select(".ResultItem_CareerItem__pplVI");
 
         for (Element jobElement : jobElements) {
-            JobPosting job = new JobPosting();
+            RawJobPosting rawJobPosting = new RawJobPosting();
 
             // Job Detail URL
             Element jobLink = jobElement.selectFirst("a");
             if (jobLink != null) {
-                job.setJobDetailUrl(jobLink.attr("href"));
+                rawJobPosting.setJobUrl(url + jobLink.attr("href"));
             }
 
             // Title and Career Level
@@ -56,14 +63,16 @@ public class SocarCorpJobPostingExtractor {
             if (titleElement != null) {
                 String title = titleElement.select("span").text();
                 String careerLevel = titleElement.select("em").text();
-                job.setTitle(title);
-                job.setCareerLevel(careerLevel);
+                rawJobPosting.setJobTitle(title);
+                Map<String, String> optional = new HashMap<>();
+                optional.put("jobCareerLevel", careerLevel);
+                rawJobPosting.setJobOptionalInformation(optional);
             }
 
             // Department: 첫 번째 <span> 태그를 찾아서 부서 정보로 설정
             Element departmentElement = jobElement.selectFirst(".ResultItem_tag__N9pI_");
             if (departmentElement != null) {
-                job.setJobRole(departmentElement.text()); // 부서 정보 가져오기
+                rawJobPosting.setJobType(departmentElement.text()); // 부서 정보 가져오기
             }
 
 
@@ -74,21 +83,21 @@ public class SocarCorpJobPostingExtractor {
                 for (Element tag : fieldTags) {
                     fields.add(tag.text());
                 }
-                job.setJobCategory(String.join(", ", fields));
+                rawJobPosting.setJobFamily(String.join(", ", fields));
             }
 
             // Company
             Element companyElement = jobElement.selectFirst(".ResultItem_tag__N9pI_");
             if (companyElement != null) {
-                job.setCompany(companyElement.text());
+                rawJobPosting.setJobCompany(companyElement.text());
             }
 
-            if(JobPostingUtil.isValidJobPosting(job)) {
-                jobPostings.add(job);
-            }
+
+            rawJobPostings.add(rawJobPosting);
+
         }
 
-        return jobPostings;
+        return rawJobPostings;
     }
 
 

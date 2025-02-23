@@ -9,10 +9,13 @@ import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import java.util.ArrayList;
-import java.util.List;
 
+import java.util.*;
+
+import posting.job.collector.domain.JobFamily;
 import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.RawJobPosting;
+import posting.job.collector.service.normalizer.HyundaiJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
 
 
@@ -21,13 +24,15 @@ public class HyundaiJobPostingExtractor {
     private final String url;
 
     public String extract() throws Exception {
-        List<JobPosting> jobPostings = crawlHyundaiCareers();
+        List<RawJobPosting> rawJobPostings = crawlHyundaiCareers();
+        List<JobPosting> jobPostings = new HyundaiJobNormalizer().normalize(rawJobPostings);
         return JobPostingUtil.convertToJson(jobPostings);
     }
 
-    private List<JobPosting> crawlHyundaiCareers() throws Exception {
-        List<JobPosting> jobPostings = new ArrayList<>();
-        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+    private List<RawJobPosting> crawlHyundaiCareers() throws Exception {
+        List<RawJobPosting> rawJobPostings = new ArrayList<>();
+//        WebDriverManager.chromedriver().driverVersion("113.0.5672.126").setup();
+        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--disable-gpu");
@@ -44,14 +49,14 @@ public class HyundaiJobPostingExtractor {
         Elements jobItems = document.select("li"); // li 태그로 반복
 
         for (Element jobItem : jobItems) {
-            JobPosting job = new JobPosting();
+            RawJobPosting rawJobPosting = new RawJobPosting();
 
             // 제목 가져오기
             Element titleElement = jobItem.selectFirst("strong");
             if (titleElement == null || titleElement.text().trim().isEmpty()) {
                 continue; // title이 없으면 해당 객체는 건너뜁니다.
             }
-            job.setTitle(titleElement.text().trim());
+            rawJobPosting.setJobTitle(titleElement.text().trim());
 
             // 부서 정보 (예: #IT, #Security Engineering)
             Elements departmentElements = jobItem.select("span[data-type='sec'], span[data-type='fld']");
@@ -66,14 +71,17 @@ public class HyundaiJobPostingExtractor {
                 }
             }
             if (departmentBuilder.length() > 0) {
-                job.setJobRole(departmentBuilder.toString());
+                rawJobPosting.setJobType(departmentBuilder.toString());
             }
 
 
             // 채용 기간 (예: 채용시까지)
             Element periodElement = jobItem.selectFirst(".d__day");
             if (periodElement != null) {
-                job.setPeriod(periodElement.text().trim());
+                //jobOptionalInformation
+                Map<String, String> jobOptionalInformation = new HashMap<>();
+                jobOptionalInformation.put("jobPeriod",periodElement.text().trim());
+                rawJobPosting.setJobOptionalInformation(jobOptionalInformation);
             }
 
             // 필드 정보 (예: #IT)
@@ -89,7 +97,7 @@ public class HyundaiJobPostingExtractor {
                 }
             }
             if (fieldBuilder.length() > 0) {
-                job.setJobCategory(fieldBuilder.toString());
+                rawJobPosting.setJobFamily(JobFamily.normalize(fieldBuilder.toString().replace("#", "")));
             }
 
 
@@ -97,15 +105,13 @@ public class HyundaiJobPostingExtractor {
             // 상세 URL
             Element jobDetailLink = jobItem.selectFirst("a");
             if (jobDetailLink != null) {
-                job.setJobDetailUrl(jobDetailLink.absUrl("href"));
+                rawJobPosting.setJobUrl( url + jobDetailLink.absUrl("href"));
             }
 
-            if(JobPostingUtil.isValidJobPosting(job)) {
-                job.setCompany("HYUNDAI");
-                jobPostings.add(job);
-            }
+            rawJobPosting.setJobCompany("HYUNDAI");
+            rawJobPostings.add(rawJobPosting);
         }
-        return jobPostings;
+        return rawJobPostings;
     }
 
 

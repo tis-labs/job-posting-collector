@@ -9,13 +9,18 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import posting.job.collector.domain.JobFamily;
 import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.RawJobPosting;
+import posting.job.collector.service.normalizer.KakaoJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
 
 
@@ -24,13 +29,15 @@ public class KakaoJobPostingExtractor {
     private final String url;
 
     public String extract() throws Exception {
-        List<JobPosting> jobPostings = crawlKakaoCareers();
+        List<RawJobPosting> rawJobPostings = crawlKakaoCareers();
+        List<JobPosting> jobPostings = new KakaoJobNormalizer().normalize(rawJobPostings);
         return JobPostingUtil.convertToJson(jobPostings);
     }
 
-    private List<JobPosting> crawlKakaoCareers() throws Exception {
-        List<JobPosting> jobPostings = new ArrayList<>();
-        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+    private List<RawJobPosting> crawlKakaoCareers() throws Exception {
+        List<RawJobPosting> rawJobPostings = new ArrayList<>();
+//        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+        WebDriverManager.chromedriver().setup();
         //브라우저 숨김처리
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
@@ -61,23 +68,23 @@ public class KakaoJobPostingExtractor {
         }
         Elements Jobs = contJob.select("ul.list_jobs a");
         for (Element card: Jobs){
-            JobPosting job = new JobPosting();
-            job.setJobCategory(jobCategory);
+            RawJobPosting rawJobPosting = new RawJobPosting();
+            Map<String, String> optionalInfo = new HashMap<>();
+
+            rawJobPosting.setJobFamily(JobFamily.normalize(jobCategory));
 
             String href = card.attr("href");
-            job.setJobDetailUrl(href);
-
-            job.setId(extractId(href));
-
+            rawJobPosting.setJobUrl(url + href);
             String title = card.select("h4.tit_jobs").text();
-            job.setTitle(title);
+            rawJobPosting.setJobTitle(title);
 
 
             String regex = "\\(([^)]*)\\)$";
             Pattern pattern = Pattern.compile(regex);
             Matcher matcher = pattern.matcher(title);
             while (matcher.find()){
-                job.setCareerLevel( matcher.group(1));
+                optionalInfo.put("jobPeriod", matcher.group(1));
+
 
             }
 
@@ -85,7 +92,7 @@ public class KakaoJobPostingExtractor {
 
             for (Element jobRoleElement : JobRoleElements) {
                 String jobRole = jobRoleElement.ownText().replace("#", "").trim();
-                job.setJobRole(jobRole);
+                rawJobPosting.setJobType(jobRole);
             }
 
 
@@ -94,7 +101,8 @@ public class KakaoJobPostingExtractor {
             for (Element infoElement : infoElements) {
                 String hiringDeadline = infoElement.select("dt:contains(영입마감일) + dd").text();
                 if (!hiringDeadline.isEmpty()) {
-                    job.setPeriod(hiringDeadline);
+                    optionalInfo.put("jobPeriod", hiringDeadline);
+
                 }
             }
 
@@ -104,7 +112,7 @@ public class KakaoJobPostingExtractor {
             for (Element employmentTypeElement : employmentTypeElements) {
                 if (employmentTypeElement.select("dt:contains(직원유형)").size() > 0) {
                     String employmentType = employmentTypeElement.select("dd").text();
-                    job.setEmploymentType(employmentType);
+                    optionalInfo.put("jobEmploymentType", employmentType);
                 }
             }
 
@@ -113,17 +121,17 @@ public class KakaoJobPostingExtractor {
             for (Element companyInfoElement : companyInfoElements) {
                 if (companyInfoElement.select("dt:contains(회사정보)").size() > 0) {
                     String company = companyInfoElement.select("dd").text();
-                    job.setCompany(company);
+                    rawJobPosting.setJobCompany(company);
                 }
             }
 
-            if(JobPostingUtil.isValidJobPosting(job)) {
-                jobPostings.add(job);
-            }
+            rawJobPosting.setJobOptionalInformation(optionalInfo);
+            rawJobPostings.add(rawJobPosting);
+
 
 
         }
-        return jobPostings;
+        return rawJobPostings;
     }
 
     private String extractId(String href) {

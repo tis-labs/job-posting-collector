@@ -12,7 +12,10 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import java.util.ArrayList;
 import java.util.List;
+
 import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.RawJobPosting;
+import posting.job.collector.service.normalizer.DunamuJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
 
 
@@ -21,13 +24,15 @@ public class DunamuJobPostingExtractor {
     private final String url;
 
     public String extract() throws Exception {
-        List<JobPosting> jobPostings = crawlDunamuCareers();
-        return JobPostingUtil.convertToJson(jobPostings);
+        List<RawJobPosting> rawJobPostings = crawlDunamuCareers();
+        List<JobPosting> jobPosting = new DunamuJobNormalizer().normalize(rawJobPostings);
+        return JobPostingUtil.convertToJson(jobPosting);
     }
 
-    private List<JobPosting> crawlDunamuCareers() throws Exception {
-        List<JobPosting> jobPostings = new ArrayList<>();
-        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+    private List<RawJobPosting> crawlDunamuCareers() throws Exception {
+        List<RawJobPosting> rawJobPostings = new ArrayList<>();
+//        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--disable-gpu");
@@ -42,34 +47,28 @@ public class DunamuJobPostingExtractor {
         Elements jobElements = document.select("a[href^='/careers/jobs/']");
 
         for (Element jobElement : jobElements) {
-            JobPosting job = new JobPosting();
+            RawJobPosting rawJobPosting = new RawJobPosting();
 
             // Job Detail URL
             String jobDetailUrl = jobElement.attr("href");
-            job.setJobDetailUrl(jobDetailUrl);
+            rawJobPosting.setJobUrl(url + jobDetailUrl);
 
             // Title (직무명)
             Element titleElement = jobElement.selectFirst("p");
             if (titleElement != null) {
-                job.setTitle(titleElement.text());
+                rawJobPosting.setJobTitle(titleElement.text());
             }
 
             // Department (부서) - <em> 태그에서 값 가져오기
             Element departmentElement = jobElement.selectFirst("em");
             if (departmentElement != null) {
-                job.setJobRole(departmentElement.text());
+                rawJobPosting.setJobType(departmentElement.text());
             }
-
-
-
-            if(JobPostingUtil.isValidJobPosting(job)) {
-                // Company (회사명) - 회사명은 DUNAMU로 고정
-                job.setCompany("DUNAMU");
-                jobPostings.add(job);
-            }
+            rawJobPosting.setJobCompany("DUNAMU");
+            rawJobPostings.add(rawJobPosting);
         }
 
-        return jobPostings;
+        return rawJobPostings;
     }
 
     private String extractId(String href) {

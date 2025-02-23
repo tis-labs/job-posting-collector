@@ -11,11 +11,15 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.RawJobPosting;
+import posting.job.collector.service.normalizer.NhnJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
 
 
@@ -25,14 +29,16 @@ public class NhnJobPostingExtractor {
 
 
     public String extract() throws Exception {
-        List<JobPosting> jobPostings = crawlNhnCareers();
+        List<RawJobPosting> rawJobPostings = crawlNhnCareers();
+        List<JobPosting> jobPostings = new NhnJobNormalizer().normalize(rawJobPostings);
         return JobPostingUtil.convertToJson(jobPostings);
     }
 
-    private List<JobPosting> crawlNhnCareers() throws Exception {
-        List<JobPosting> jobPostings = new ArrayList<>();
+    private List<RawJobPosting> crawlNhnCareers() throws Exception {
+        List<RawJobPosting> rawJobPostings = new ArrayList<>();
 
-        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+//        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--disable-gpu");
@@ -47,18 +53,18 @@ public class NhnJobPostingExtractor {
         Document document = Jsoup.parse(pageSource);
 
         // 반복 처리: 각 구인 공고 블록 선택
-        Elements jobElements = document.select("div[role=presentation]"); // 각 JobPosting 컨테이너 선택
+        Elements jobElements = document.select("div[role=presentation]"); // 각 RawJobPosting 컨테이너 선택
         for (Element jobElement : jobElements) {
-            JobPosting job = new JobPosting();
+            RawJobPosting rawJobPosting = new RawJobPosting();
 
             // 제목 추출
             Element titleElement = jobElement.selectFirst("h4 span");
             if (titleElement != null) {
-                job.setTitle(titleElement.text());
+                rawJobPosting.setJobTitle(titleElement.text());
                 Pattern pattern = Pattern.compile("\\[(.*?)]");
                 Matcher matcher = pattern.matcher(titleElement.text());
                 if (matcher.find()) {
-                    job.setCompany(matcher.group(1).trim());
+                    rawJobPosting.setJobCompany(matcher.group(1).trim());
                 }
             }
 
@@ -66,20 +72,28 @@ public class NhnJobPostingExtractor {
             Element detailsContainer = jobElement.selectFirst(".flex.items-center.gap-x-8");
             if (detailsContainer != null) {
                 Elements detailSpans = detailsContainer.select("span"); // span 태그만 선택
-                if (detailSpans.size() > 0) job.setJobCategory(detailSpans.get(0).text());
-                if (detailSpans.size() > 1) job.setJobRole(detailSpans.get(1).text());
-                if (detailSpans.size() > 2) job.setCareerLevel(detailSpans.get(2).text());
-                if (detailSpans.size() > 3) job.setEmploymentType(detailSpans.get(3).text());
-                if (detailSpans.size() > 4) job.setPeriod(detailSpans.get(4).text());
+                if (detailSpans.size() > 0) rawJobPosting.setJobFamily(detailSpans.get(0).text());
+                if (detailSpans.size() > 1) rawJobPosting.setJobType(detailSpans.get(1).text());
+                Map<String, String> optionalInfo = new HashMap<>();
+                if (detailSpans.size() > 2) {
+                    optionalInfo.put("jobCareerLevel", detailSpans.get(2).text());
+                }
+                if (detailSpans.size() > 3) {
+                    optionalInfo.put("jobEmploymentType", detailSpans.get(3).text());
+                }
+                if (detailSpans.size() > 4) {
+                    optionalInfo.put("jobPeriod", detailSpans.get(4).text());
+                }
+
+                rawJobPosting.setJobOptionalInformation(optionalInfo);
             }
 
-            if(JobPostingUtil.isValidJobPosting(job)) {
-                jobPostings.add(job);
-            }
+            rawJobPostings.add(rawJobPosting);
+
         }
 
 //
-        return jobPostings;
+        return rawJobPostings;
     }
 
     private String extractId(String href) {

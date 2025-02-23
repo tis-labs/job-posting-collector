@@ -11,8 +11,14 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.RawJobPosting;
+import posting.job.collector.domain.JobType;
+import posting.job.collector.service.normalizer.TossJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
 
 @AllArgsConstructor
@@ -20,13 +26,15 @@ public class TossJobPostingExtractor {
     private final String url;
 
     public String extract() throws Exception {
-        List<JobPosting> jobPostings = crawlTossCareers();
+        List<RawJobPosting> rawJobPostings = crawlTossCareers();
+        List<JobPosting> jobPostings = new TossJobNormalizer().normalize(rawJobPostings);
         return JobPostingUtil.convertToJson(jobPostings);
     }
 
-    private List<JobPosting> crawlTossCareers() throws Exception {
-        List<JobPosting> jobPostings = new ArrayList<>();
-        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+    private List<RawJobPosting> crawlTossCareers() throws Exception {
+        List<RawJobPosting> rawJobPostings = new ArrayList<>();
+//        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+        WebDriverManager.chromedriver().setup();
         //브라우저 숨김처리
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
@@ -47,18 +55,18 @@ public class TossJobPostingExtractor {
         Elements jobElements = document.select("div.css-g65o95");
 
         for (Element jobElement : jobElements) {
-            JobPosting job = new JobPosting();
+            RawJobPosting rawJobPosting = new RawJobPosting();
 
             // Job Detail URL
             Element jobLink = jobElement.selectFirst("div[href]");
             if (jobLink != null) {
-                job.setJobDetailUrl(jobLink.attr("href"));
+                rawJobPosting.setJobUrl(url + jobLink.attr("href"));
             }
 
             // Title
             Element titleElement = jobElement.selectFirst(".typography--h5.typography--bold");
             if (titleElement != null) {
-                job.setTitle(titleElement.text());
+                rawJobPosting.setJobTitle(titleElement.text());
             }
 
             // Department (부서 정보) - 첫 번째 'SAP' 값을 추출
@@ -66,7 +74,7 @@ public class TossJobPostingExtractor {
             if (departmentElement != null) {
                 String[] departmentParts = departmentElement.text().split(" ・ ");
                 if (departmentParts.length > 0) {
-                    job.setJobRole(departmentParts[0]);  // 첫 번째 값(SAP)을 부서로 설정
+                    rawJobPosting.setJobType(JobType.normalize(departmentParts[0]));  // 첫 번째 값(SAP)을 부서로 설정
                 }
             }
 
@@ -74,44 +82,42 @@ public class TossJobPostingExtractor {
 //            job.setField(departmentElement != null ? departmentElement.text() : null);
 
             // Career Level (경력 정보) - "(2년 이상)" 텍스트 추출
-            String careerLevel = extractCareerLevel(job.getTitle());
-            job.setCareerLevel(careerLevel);
+//            String careerLevel = extractCareerLevel(rawJobPosting.getTitle());
+            Map<String, String> optional = new HashMap<>();
+            optional.put("jobCareerLevel", rawJobPosting.getJobTitle());
+            rawJobPosting.setJobOptionalInformation(optional);
 
-            // Employment Type (고용 형태)
-            // 이 예시에서는 고용 형태 정보가 없으므로 null로 설정 (추후 태그를 기반으로 추가 가능)
-            job.setEmploymentType(null);
 
             // Period (채용 기간) - "~1/30" 정보 추출
-            String period = extractPeriod(job.getTitle());
-            job.setPeriod(period);
+//            String period = extractPeriod(rawJobPosting.getTitle());
+            optional.put("jobPeriod", rawJobPosting.getJobTitle());
+            rawJobPosting.setJobOptionalInformation(optional);
 
-            if(JobPostingUtil.isValidJobPosting(job)) {
                 // Company (회사명) - 'Toss'로 설정
-                job.setCompany("Toss");
-                jobPostings.add(job);
-            }
+                rawJobPosting.setJobCompany("Toss");
+                rawJobPostings.add(rawJobPosting);
         }
 
-        return jobPostings;
+        return rawJobPostings;
 
 
     }
 
     // Career Level을 제목에서 추출하는 메소드
-    private String extractCareerLevel(String title) {
-        if (title != null && title.contains("년 이상")) {
-            return title.substring(title.indexOf("(") + 1, title.indexOf("년 이상")).trim();
-        }
-        return null;
-    }
+//    private String extractCareerLevel(String title) {
+//        if (title != null && title.contains("년 이상")) {
+//            return title.substring(title.indexOf("(") + 1, title.indexOf("년 이상")).trim();
+//        }
+//        return null;
+//    }
 
     // Period를 제목에서 추출하는 메소드
-    private String extractPeriod(String title) {
-        if (title != null && title.contains("~")) {
-            return title.substring(title.indexOf("~") + 1).trim();
-        }
-        return null;
-    }
+//    private String extractPeriod(String title) {
+//        if (title != null && title.contains("~")) {
+//            return title.substring(title.indexOf("~") + 1).trim();
+//        }
+//        return null;
+//    }
 
 
 
