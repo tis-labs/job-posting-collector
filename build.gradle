@@ -28,6 +28,8 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.seleniumhq.selenium:selenium-java:4.8.0'
+    implementation 'io.github.bonigarcia:webdrivermanager:5.7.0'
     implementation 'org.axonframework:axon-spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-batch'
     // https://mvnrepository.com/artifact/org.jsoup/jsoup
