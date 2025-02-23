@@ -12,25 +12,31 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.RawJobPosting;
 import posting.job.collector.domain.JobPostingResult;
+import posting.job.collector.service.normalizer.WoowahanJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @AllArgsConstructor
 public class WoowahanJobPostingExtractor {
     private final String url;
 
     public String extract() throws Exception {
-        List<JobPosting> jobPostings = crawlWoowahanCareers();
+        List<RawJobPosting> rawJobPostings = crawlWoowahanCareers();
+        List<JobPosting> jobPostings = new WoowahanJobNormalizer().normalize(rawJobPostings);
         return convertToJson(jobPostings);
     }
 
-    private List<JobPosting> crawlWoowahanCareers() throws Exception {
-        List<JobPosting> jobPostings = new ArrayList<>();
-        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+    private List<RawJobPosting> crawlWoowahanCareers() throws Exception {
+        List<RawJobPosting> rawJobPostings = new ArrayList<>();
+//        WebDriverManager.chromedriver().driverVersion("131.0.6778.267").setup();
+        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--disable-gpu");
@@ -43,49 +49,52 @@ public class WoowahanJobPostingExtractor {
         String pageSource = driver.getPageSource();
         driver.quit();
         Document document = Jsoup.parse(pageSource);
-        // 반복 처리: 각 JobPosting 블록 선택
+        // 반복 처리: 각 RawJobPosting 블록 선택
         Elements jobElements = document.select("li");
         for (Element jobElement : jobElements) {
-            JobPosting job = new JobPosting();
+            RawJobPosting rawJobPosting = new RawJobPosting();
 
             // Job ID 추출
             Element linkElement = jobElement.selectFirst("a.title");
             if (linkElement != null) {
                 String jobUrl = linkElement.attr("href");
-                job.setJobDetailUrl(jobUrl);
+                rawJobPosting.setJobUrl(url + jobUrl);
 
                 // ID는 URL에서 추출
                 String[] urlParts = jobUrl.split("/");
-                if (urlParts.length > 2) {
-                    job.setId(urlParts[urlParts.length - 2]);
-                }
+//                if (urlParts.length > 2) {
+                    rawJobPosting.setJobUrl(url + urlParts[urlParts.length - 2]);
+//                }
             }
 
             // Title 및 Department 추출
             Element titleElement = jobElement.selectFirst("p.fr-view");
             if (titleElement != null) {
                 String titleText = titleElement.text();
-                job.setTitle(titleText);
+                rawJobPosting.setJobTitle(titleText);
 
                 // 부서 정보 추출
-                String department = extractDepartmentFromTitle(titleText);
-                job.setJobCategory(department);
+//                String department = extractDepartmentFromTitle(titleText);
+                rawJobPosting.setJobFamily(titleText);
             }
 
             // Career Level 추출
             Element careerElement = jobElement.selectFirst("span.flag-career");
+            Map<String, String> optional = new HashMap<>();
             if (careerElement != null) {
-                job.setCareerLevel(careerElement.text());
+                optional.put("jobCareerLevel", careerElement.text());
             }
 
             // Employment Type 및 Period 추출
             Elements typeElements = jobElement.select("div.flag-type span");
             if (typeElements.size() > 0) {
-                job.setEmploymentType(typeElements.get(0).text()); // "정규직"
+                optional.put("jobEmploymentType", typeElements.get(0).text());
             }
             if (typeElements.size() > 1) {
-                job.setPeriod(typeElements.get(1).text().trim()); // "영입 종료시"
+                optional.put("jobPeriod", typeElements.get(1).text().trim());
+
             }
+            rawJobPosting.setJobOptionalInformation(optional);
 
             // Tags (Field) 추출
             Elements tagElements = jobElement.select("div.flag-tag button");
@@ -96,41 +105,41 @@ public class WoowahanJobPostingExtractor {
                 }
 
                 if (!tags.isEmpty()) {
-                    job.setJobRole(String.join(", ", tags));
+                    rawJobPosting.setJobType(String.join(", ", tags));
                 } else {
-                    job.setJobRole(null); // 값이 없으면 null로 설정
+                    rawJobPosting.setJobType(null); // 값이 없으면 null로 설정
 
                 }
 
             } else {
-                job.setJobRole(null); // 태그 자체가 없을 경우 null로 설정
+                rawJobPosting.setJobType(null); // 태그 자체가 없을 경우 null로 설정
 
             }
 
             // Company 정보 설정
 
-            if(JobPostingUtil.isValidJobPosting(job)) {
-                job.setCompany("WOOWAHAN");
-                jobPostings.add(job);
-            }
+
+                rawJobPosting.setJobCompany("WOOWAHAN");
+                rawJobPostings.add(rawJobPosting);
+
         }
 
-        return jobPostings;
+        return rawJobPostings;
     }
 
     // Title에서 Department 정보 추출
-    private static String extractDepartmentFromTitle(String title) {
-        String department = "";
-
-        // 괄호 안의 내용 추출
-        int start = title.indexOf("[");
-        int end = title.indexOf("]");
-        if (start >= 0 && end > start) {
-            department = title.substring(start + 1, end).trim();
-        }
-
-        return department;
-    }
+//    private static String extractDepartmentFromTitle(String title) {
+//        String department = "";
+//
+//        // 괄호 안의 내용 추출
+//        int start = title.indexOf("[");
+//        int end = title.indexOf("]");
+//        if (start >= 0 && end > start) {
+//            department = title.substring(start + 1, end).trim();
+//        }
+//
+//        return department;
+//    }
 
     private String convertToJson(List<JobPosting> jobPostings) {
         JobPostingResult result = new JobPostingResult(jobPostings, jobPostings.size(), LocalDate.now().toString());
