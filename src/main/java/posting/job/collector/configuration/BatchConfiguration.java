@@ -13,13 +13,12 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
-import posting.job.collector.domain.TempJobPosting;
+import posting.job.collector.domain.CrawledJobPosting;
 import posting.job.collector.service.ExtractJobPostingService;
 import posting.job.collector.service.FindJobPostingService;
 import posting.job.collector.service.StandbyCrawledJobService;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.List;
 
 @Configuration
 public class BatchConfiguration {
@@ -45,11 +44,11 @@ public class BatchConfiguration {
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
             ItemReader<TargetSource> findTargetJobPostingReader,
-            ItemProcessor<TargetSource, String> collectJobPostingProcessor,
-            ItemWriter<String> saveJobPostingWriter
+            ItemProcessor<TargetSource, List<CrawledJobPosting>> collectJobPostingProcessor,
+            ItemWriter< List<CrawledJobPosting>> saveJobPostingWriter
     ) {
         return new StepBuilder(COLLECT_JOB_POSTING, jobRepository)
-                .<TargetSource, String>chunk(CHUNK_SIZE, transactionManager)
+                .<TargetSource, List<CrawledJobPosting>>chunk(CHUNK_SIZE, transactionManager)
                 .reader(findTargetJobPostingReader)
                 .processor(collectJobPostingProcessor)
                 .writer(saveJobPostingWriter)
@@ -70,22 +69,21 @@ public class BatchConfiguration {
     }
 
     @Bean
-        // FIXME : String 유형을 JobPosting 방식으로 변형한다.
-    ItemProcessor<TargetSource, String> collectJobPostingProcessor(
+    ItemProcessor<TargetSource, List<CrawledJobPosting>> collectJobPostingProcessor(
             ExtractJobPostingService extractJobPostingService
     ) {
         return extractJobPostingService::execute;
     }
 
     @Bean
-    ItemWriter<String> saveJobPostingWriter(
+    ItemWriter<List<CrawledJobPosting>> saveJobPostingWriter(
             StandbyCrawledJobService standbyCrawledJobService
     ) {
-        return items -> {
-            // FIXME : String 유형을 JobPosting 방식으로 변형한다.
-            for (String item : items) {
-                TempJobPosting tempJobPosting = new TempJobPosting(UUID.randomUUID().toString(), item, LocalDateTime.now());
-                standbyCrawledJobService.standby(tempJobPosting);
+        return jobPostings -> {
+            for (List<CrawledJobPosting> crawledJobPosting :  jobPostings) {
+                for (CrawledJobPosting job : crawledJobPosting) {
+                    standbyCrawledJobService.standby(job);
+                }
             }
         };
     }
