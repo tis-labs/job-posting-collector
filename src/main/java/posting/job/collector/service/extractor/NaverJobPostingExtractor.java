@@ -7,22 +7,25 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.CrawledJobPosting;
 import posting.job.collector.domain.RawJobPosting;
 import posting.job.collector.service.normalizer.NaverJobNormalizer;
-import posting.job.collector.util.JobPostingUtil;
 
 
 @AllArgsConstructor
 public class NaverJobPostingExtractor {
     private final String url;
     private static final String NAVER_JOB_DETAIL_URL = "https://recruit.navercorp.com/rcrt/view.do?annoId=";
-    public String extract() throws Exception {
+    public   List<CrawledJobPosting> extract() throws Exception {
         List<RawJobPosting> rawJobPostings = crawlNaverCareers();
-        List<JobPosting> jobPostings = new NaverJobNormalizer().normalize(rawJobPostings);
-        return JobPostingUtil.convertToJson(jobPostings);
+        List<CrawledJobPosting> crawledJobPostings = new NaverJobNormalizer().normalize(rawJobPostings);
+        return crawledJobPostings;
+//        return jobPostings;
     }
 
     private List<RawJobPosting> crawlNaverCareers() throws Exception {
@@ -48,7 +51,6 @@ public class NaverJobPostingExtractor {
             if (infoTexts.size() >= 5) {
                 rawJobPosting.setJobFamily(infoTexts.get(0).text());
                 rawJobPosting.setJobType(infoTexts.get(1).text());
-//                Map<String, String> optionalInfo = new HashMap<>();
                 optionalInfo.put("jobCareerLevel", infoTexts.get(2).text());
                 optionalInfo.put("jobEmploymentType", infoTexts.get(3).text());
                 optionalInfo.put("jobPeriod", infoTexts.get(4).text());
@@ -92,7 +94,7 @@ public class NaverJobPostingExtractor {
         String spanValue = "";
         for (Element detailBox : detailBoxes) {
 
-            Elements spans = detailBox.select("span");
+            Elements spans = detailBox.select("span:not(button span)");
             if(spans.size() >= 2){
                 String firstTitle = spans.get(0).text();
                 String secondTitle = spans.get(1).text();
