@@ -1,6 +1,6 @@
 package posting.job.collector.service.normalizer;
 
-import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.CrawledJobPosting;
 import posting.job.collector.domain.RawJobPosting;
 
 import java.util.ArrayList;
@@ -9,22 +9,22 @@ import java.util.List;
 public class HyundaiJobNormalizer implements RawJobNormalizer {
 
     @Override
-    public List<JobPosting> normalize(List<RawJobPosting> rawJobPostings) {
-        List<JobPosting> jobPostings = new ArrayList<>();
+    public List<CrawledJobPosting> normalize(List<RawJobPosting> rawJobPostings) {
+        List<CrawledJobPosting> crawledJobPostings = new ArrayList<>();
 
         for (RawJobPosting rawJobPosting : rawJobPostings) {
-            JobPosting jobPosting = new JobPosting();
-            jobPosting.setJobCompany(rawJobPosting.getJobCompany());
-            jobPosting.setJobTitle(rawJobPosting.getJobTitle());
-            jobPosting.setJobFamily(rawJobPosting.getJobFamily());
-            jobPosting.setJobType(rawJobPosting.getJobType());
-            jobPosting.setJobUrl(rawJobPosting.getJobUrl());
-            jobPosting.setJobOptionalInformation(rawJobPosting.getJobOptionalInformation());
-            jobPosting.setJobIdentity(jobPosting.generateUniqueId());
+            CrawledJobPosting crawledJobPosting = new CrawledJobPosting();
+            crawledJobPosting.setJobCompany(rawJobPosting.getJobCompany());
+            crawledJobPosting.setJobTitle(rawJobPosting.getJobTitle());
+            crawledJobPosting.setJobFamily(rawJobPosting.getJobFamily());
+            crawledJobPosting.setJobType(rawJobPosting.getJobType());
+            crawledJobPosting.setJobUrl(rawJobPosting.getJobUrl());
+            crawledJobPosting.setJobOptionalInformation(rawJobPosting.getJobOptionalInformation());
+            crawledJobPosting.setJobIdentity(crawledJobPosting.generateUniqueId());
 
-            jobPostings.add(jobPosting);
+            crawledJobPostings.add(crawledJobPosting);
         }
 
-        return jobPostings;
+        return crawledJobPostings;
     }
 }

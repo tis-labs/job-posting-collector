@@ -13,7 +13,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import java.util.*;
 
 import posting.job.collector.domain.JobFamily;
-import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.CrawledJobPosting;
 import posting.job.collector.domain.RawJobPosting;
 import posting.job.collector.service.normalizer.HyundaiJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
@@ -25,8 +25,8 @@ public class HyundaiJobPostingExtractor {
 
     public String extract() throws Exception {
         List<RawJobPosting> rawJobPostings = crawlHyundaiCareers();
-        List<JobPosting> jobPostings = new HyundaiJobNormalizer().normalize(rawJobPostings);
-        return JobPostingUtil.convertToJson(jobPostings);
+        List<CrawledJobPosting> crawledJobPostings = new HyundaiJobNormalizer().normalize(rawJobPostings);
+        return JobPostingUtil.convertToJson(crawledJobPostings);
     }
 
     private List<RawJobPosting> crawlHyundaiCareers() throws Exception {

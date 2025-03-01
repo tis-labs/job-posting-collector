@@ -11,11 +11,10 @@ import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.CrawledJobPosting;
 import posting.job.collector.domain.RawJobPosting;
 import posting.job.collector.domain.JobPostingResult;
 import posting.job.collector.service.normalizer.WoowahanJobNormalizer;
-import posting.job.collector.util.JobPostingUtil;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -29,8 +28,8 @@ public class WoowahanJobPostingExtractor {
 
     public String extract() throws Exception {
         List<RawJobPosting> rawJobPostings = crawlWoowahanCareers();
-        List<JobPosting> jobPostings = new WoowahanJobNormalizer().normalize(rawJobPostings);
-        return convertToJson(jobPostings);
+        List<CrawledJobPosting> crawledJobPostings = new WoowahanJobNormalizer().normalize(rawJobPostings);
+        return convertToJson(crawledJobPostings);
     }
 
     private List<RawJobPosting> crawlWoowahanCareers() throws Exception {
@@ -141,8 +140,8 @@ public class WoowahanJobPostingExtractor {
 //        return department;
 //    }
 
-    private String convertToJson(List<JobPosting> jobPostings) {
-        JobPostingResult result = new JobPostingResult(jobPostings, jobPostings.size(), LocalDate.now().toString());
+    private String convertToJson(List<CrawledJobPosting> crawledJobPostings) {
+        JobPostingResult result = new JobPostingResult(crawledJobPostings, crawledJobPostings.size(), LocalDate.now().toString());
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         return gson.toJson(result);
     }

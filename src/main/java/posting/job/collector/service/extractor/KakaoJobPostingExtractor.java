@@ -18,7 +18,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import posting.job.collector.domain.JobFamily;
-import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.CrawledJobPosting;
 import posting.job.collector.domain.RawJobPosting;
 import posting.job.collector.service.normalizer.KakaoJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
@@ -30,8 +30,8 @@ public class KakaoJobPostingExtractor {
 
     public String extract() throws Exception {
         List<RawJobPosting> rawJobPostings = crawlKakaoCareers();
-        List<JobPosting> jobPostings = new KakaoJobNormalizer().normalize(rawJobPostings);
-        return JobPostingUtil.convertToJson(jobPostings);
+        List<CrawledJobPosting> crawledJobPostings = new KakaoJobNormalizer().normalize(rawJobPostings);
+        return JobPostingUtil.convertToJson(crawledJobPostings);
     }
 
     private List<RawJobPosting> crawlKakaoCareers() throws Exception {

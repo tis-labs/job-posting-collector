@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.CrawledJobPosting;
 import posting.job.collector.domain.RawJobPosting;
 import posting.job.collector.service.normalizer.SocarCorpJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
@@ -27,8 +27,8 @@ public class SocarCorpJobPostingExtractor {
 
     public String extract() throws Exception {
         List<RawJobPosting> rawJobPostings = crawlSocarCorpCareers();
-        List<JobPosting> jobPostings = new SocarCorpJobNormalizer().normalize(rawJobPostings);
-        return JobPostingUtil.convertToJson(jobPostings);
+        List<CrawledJobPosting> crawledJobPostings = new SocarCorpJobNormalizer().normalize(rawJobPostings);
+        return JobPostingUtil.convertToJson(crawledJobPostings);
     }
 
     private List<RawJobPosting> crawlSocarCorpCareers() throws Exception {

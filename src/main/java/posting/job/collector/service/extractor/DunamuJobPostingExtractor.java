@@ -13,7 +13,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import java.util.ArrayList;
 import java.util.List;
 
-import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.CrawledJobPosting;
 import posting.job.collector.domain.RawJobPosting;
 import posting.job.collector.service.normalizer.DunamuJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
@@ -25,8 +25,8 @@ public class DunamuJobPostingExtractor {
 
     public String extract() throws Exception {
         List<RawJobPosting> rawJobPostings = crawlDunamuCareers();
-        List<JobPosting> jobPosting = new DunamuJobNormalizer().normalize(rawJobPostings);
-        return JobPostingUtil.convertToJson(jobPosting);
+        List<CrawledJobPosting> crawledJobPosting = new DunamuJobNormalizer().normalize(rawJobPostings);
+        return JobPostingUtil.convertToJson(crawledJobPosting);
     }
 
     private List<RawJobPosting> crawlDunamuCareers() throws Exception {

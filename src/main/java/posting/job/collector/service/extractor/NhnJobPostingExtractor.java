@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import posting.job.collector.domain.JobPosting;
+import posting.job.collector.domain.CrawledJobPosting;
 import posting.job.collector.domain.RawJobPosting;
 import posting.job.collector.service.normalizer.NhnJobNormalizer;
 import posting.job.collector.util.JobPostingUtil;
@@ -30,8 +30,8 @@ public class NhnJobPostingExtractor {
 
     public String extract() throws Exception {
         List<RawJobPosting> rawJobPostings = crawlNhnCareers();
-        List<JobPosting> jobPostings = new NhnJobNormalizer().normalize(rawJobPostings);
-        return JobPostingUtil.convertToJson(jobPostings);
+        List<CrawledJobPosting> crawledJobPostings = new NhnJobNormalizer().normalize(rawJobPostings);
+        return JobPostingUtil.convertToJson(crawledJobPostings);
     }
 
     private List<RawJobPosting> crawlNhnCareers() throws Exception {
@@ -92,7 +92,6 @@ public class NhnJobPostingExtractor {
 
         }
 
-//
         return rawJobPostings;
     }
 

@@ -8,7 +8,7 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public class JobPostingResult {
-    private List<JobPosting> jobPostings;
+    private List<CrawledJobPosting> crawledJobPostings;
     private int totalCount;
     private String lastUpdated;
 }
