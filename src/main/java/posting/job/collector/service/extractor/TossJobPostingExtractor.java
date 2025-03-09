@@ -10,6 +10,8 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,10 +27,10 @@ import posting.job.collector.util.JobPostingUtil;
 public class TossJobPostingExtractor {
     private final String url;
 
-    public String extract() throws Exception {
+    public List<CrawledJobPosting> extract() throws Exception {
         List<RawJobPosting> rawJobPostings = crawlTossCareers();
         List<CrawledJobPosting> crawledJobPostings = new TossJobNormalizer().normalize(rawJobPostings);
-        return JobPostingUtil.convertToJson(crawledJobPostings);
+        return crawledJobPostings;
     }
 
     private List<RawJobPosting> crawlTossCareers() throws Exception {
@@ -56,11 +58,12 @@ public class TossJobPostingExtractor {
 
         for (Element jobElement : jobElements) {
             RawJobPosting rawJobPosting = new RawJobPosting();
+            rawJobPosting.setJobFamily("Engineering");
 
             // Job Detail URL
             Element jobLink = jobElement.selectFirst("div[href]");
             if (jobLink != null) {
-                rawJobPosting.setJobUrl(url + jobLink.attr("href"));
+                rawJobPosting.setJobUrl("https://toss.im" + jobLink.attr("href"));
             }
 
             // Title
@@ -84,14 +87,11 @@ public class TossJobPostingExtractor {
             // Career Level (경력 정보) - "(2년 이상)" 텍스트 추출
 //            String careerLevel = extractCareerLevel(rawJobPosting.getTitle());
             Map<String, String> optional = new HashMap<>();
-            optional.put("jobCareerLevel", rawJobPosting.getJobTitle());
-            rawJobPosting.setJobOptionalInformation(optional);
-
-
-            // Period (채용 기간) - "~1/30" 정보 추출
-//            String period = extractPeriod(rawJobPosting.getTitle());
-            optional.put("jobPeriod", rawJobPosting.getJobTitle());
-            rawJobPosting.setJobOptionalInformation(optional);
+            String category = getQueryParameter(url, "category");
+            if (category != null) {
+                optional.put("jobCategory", category);
+                rawJobPosting.setJobOptionalInformation(optional);
+            }
 
                 // Company (회사명) - 'Toss'로 설정
                 rawJobPosting.setJobCompany("Toss");
@@ -103,21 +103,23 @@ public class TossJobPostingExtractor {
 
     }
 
-    // Career Level을 제목에서 추출하는 메소드
-//    private String extractCareerLevel(String title) {
-//        if (title != null && title.contains("년 이상")) {
-//            return title.substring(title.indexOf("(") + 1, title.indexOf("년 이상")).trim();
-//        }
-//        return null;
-//    }
 
-    // Period를 제목에서 추출하는 메소드
-//    private String extractPeriod(String title) {
-//        if (title != null && title.contains("~")) {
-//            return title.substring(title.indexOf("~") + 1).trim();
-//        }
-//        return null;
-//    }
+    public static String getQueryParameter(String url, String key) throws URISyntaxException {
+        URI uri = new URI(url);
+        String query = uri.getQuery();
+        Map<String, String> queryPairs = new HashMap<>();
+
+        if (query != null) {
+            for (String param : query.split("&")) {
+                String[] pair = param.split("=");
+                if (pair.length == 2) {
+                    queryPairs.put(pair[0], pair[1]);
+                }
+            }
+        }
+
+        return queryPairs.get(key);
+    }
 
 
 

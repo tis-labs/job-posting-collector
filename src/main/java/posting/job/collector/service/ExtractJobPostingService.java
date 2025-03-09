@@ -14,11 +14,12 @@ public class ExtractJobPostingService {
     public List<CrawledJobPosting> execute(TargetSource item) throws Exception {
         return switch (item) {
             case NAVER -> new NaverJobPostingExtractor(item.getUrl()).extract();
+            case TOSS -> new TossJobPostingExtractor(item.getUrl()).extract();
 //            case NHN ->  new NhnJobPostingExtractor(item.getUrl()).extract();
 //            case KAKAO -> new KakaoJobPostingExtractor(item.getUrl()).extract();
 //            case WOOWAHAN -> new WoowahanJobPostingExtractor(item.getUrl()).extract();
 //            case SOCARCORP -> new SocarCorpJobPostingExtractor(item.getUrl()).extract();
-//            case TOSS -> new TossJobPostingExtractor(item.getUrl()).extract();
+
 //            case DUNAMU -> new DunamuJobPostingExtractor(item.getUrl()).extract();
 //            case HYUNDAI -> new HyundaiJobPostingExtractor(item.getUrl()).extract();
 
