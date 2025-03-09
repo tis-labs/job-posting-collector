@@ -82,6 +82,9 @@ public class BatchConfiguration {
         return jobPostings -> {
             for (List<CrawledJobPosting> crawledJobPosting :  jobPostings) {
                 for (CrawledJobPosting job : crawledJobPosting) {
+                    System.out.println("=====================================");
+                    System.out.println("JOB: " + job);
+                    System.out.println("=====================================");
                     standbyCrawledJobService.standby(job);
                 }
             }
